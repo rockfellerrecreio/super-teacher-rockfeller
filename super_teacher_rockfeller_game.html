@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Super Teacher Rockfeller: O Desafio!</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts & Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+        }
+        .font-fredoka {
+            font-family: 'Fredoka', cursive, sans-serif;
+        }
+        .btn-game {
+            background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+            box-shadow: 0 4px 0 #1e40af, 0 8px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.1s ease;
+        }
+        .btn-game:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #1e40af, 0 3px 6px rgba(0, 0, 0, 0.3);
+        }
+        .btn-yellow {
+            background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+            box-shadow: 0 4px 0 #b45309, 0 8px 12px rgba(0, 0, 0, 0.3);
+        }
+        .btn-yellow:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #b45309, 0 3px 6px rgba(0, 0, 0, 0.3);
+        }
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(4px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        .touch-btn:active {
+            background: rgba(255, 255, 255, 0.35);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            height: 100dvh;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #0284c7 0%, #38bdf8 60%, #e0f2fe 100%);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-6px) rotate(2deg); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #f59e0b;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center">
+
+    <div id="canvas-container">
+        
+        <!-- HUD Header -->
+        <div id="hud" class="hidden absolute top-0 left-0 right-0 z-10 px-3 py-2 flex justify-between items-center bg-slate-900/50 backdrop-blur-md border-b border-white/10 text-white">
+            <div class="flex items-center space-x-1.5">
+                <div class="bg-amber-500/90 px-2 py-0.5 rounded-full flex items-center space-x-1 shadow text-xs">
+                    <i class="fa-solid fa-star text-yellow-200 text-[10px]"></i>
+                    <span id="score-text" class="font-fredoka font-bold">0</span>
+                </div>
+                <div class="bg-rose-500/90 px-2 py-0.5 rounded-full flex items-center space-x-1 shadow text-xs">
+                    <i class="fa-solid fa-heart text-white text-[9px]"></i>
+                    <span id="lives-text" class="font-fredoka font-bold">8</span>
+                </div>
+                <div class="bg-slate-700/90 px-2 py-0.5 rounded-full flex items-center space-x-1 shadow text-xs" title="Itens bons perdidos (Máx 10)">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-300 text-[9px]"></i>
+                    <span id="missed-text" class="font-fredoka font-bold">0/10</span>
+                </div>
+            </div>
+
+            <div id="room-badge" class="bg-indigo-600/90 text-white font-bold text-[10px] px-2 py-0.5 rounded-full shadow border border-indigo-300/40 flex items-center space-x-1">
+                <i class="fa-solid fa-door-open text-indigo-200"></i>
+                <span id="room-name">Rockfeller Center</span>
+            </div>
+
+            <button id="sound-btn" onclick="toggleSound()" class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-white text-xs hover:bg-white/30 transition">
+                <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+            </button>
+        </div>
+
+        <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+        <!-- Touch Controls Bottom -->
+        <div id="touch-controls" class="hidden absolute bottom-3 left-0 right-0 z-10 px-4 flex justify-between pointer-events-none">
+            <button id="btn-left" class="touch-btn pointer-events-auto w-12 h-12 rounded-full flex items-center justify-center text-white text-lg shadow-lg active:scale-95">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <div class="pointer-events-none text-white/80 text-[10px] flex items-center font-bold bg-slate-900/60 px-2.5 py-1 rounded-full backdrop-blur-sm self-center">
+                <i class="fa-solid fa-hand-pointer mr-1 text-yellow-300"></i> Arraste na tela
+            </div>
+            <button id="btn-right" class="touch-btn pointer-events-auto w-12 h-12 rounded-full flex items-center justify-center text-white text-lg shadow-lg active:scale-95">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="absolute inset-0 z-20 flex flex-col items-center justify-between p-4 bg-gradient-to-b from-sky-600 via-indigo-700 to-slate-900 text-center overflow-y-auto">
+            
+            <div class="mt-2 flex flex-col items-center animate-float">
+                <div class="bg-yellow-400 text-slate-900 text-[10px] font-black uppercase px-3 py-0.5 rounded-full tracking-wider shadow-lg mb-1">
+                    Especial Dia dos Professores 🎓
+                </div>
+                <h1 class="font-fredoka text-xl md:text-2xl text-white font-bold drop-shadow-md leading-tight">
+                    Super Teacher<br>
+                    <span class="text-yellow-300">Rockfeller</span>
+                </h1>
+                <p class="text-sky-200 text-[11px] mt-0.5 px-2 max-w-xs">
+                    Mova a pasta de um lado para o outro para apanhar conquistas e responder os desafios!
+                </p>
+            </div>
+
+            <div class="relative my-2 flex items-center justify-center">
+                <div class="w-24 h-24 rounded-full bg-yellow-400/20 absolute animate-ping opacity-75"></div>
+                <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-yellow-400 to-amber-300 flex items-center justify-center shadow-2xl border-4 border-white/40">
+                    <span class="text-4xl">💼</span>
+                </div>
+            </div>
+
+            <div class="w-full max-w-xs mb-2 space-y-1.5">
+                <div class="bg-amber-400/90 text-slate-900 text-[10px] font-bold py-1 px-2.5 rounded-xl border border-yellow-200 shadow flex items-center justify-center space-x-1 animate-pulse">
+                    <i class="fa-solid fa-book-bookmark text-[10px]"></i>
+                    <span>RECOMENDADO: Comece lendo as regras!</span>
+                </div>
+
+                <button onclick="openRulesModal()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 border-2 border-yellow-200 text-slate-950 font-fredoka text-xs font-bold rounded-xl flex items-center justify-center space-x-2 shadow-lg transition">
+                    <i class="fa-solid fa-book-open text-slate-900 text-xs"></i>
+                    <span>1º LER REGRAS & SIGNIFICADOS</span>
+                </button>
+
+                <button onclick="startGame()" class="btn-yellow w-full py-3 text-slate-900 font-fredoka text-sm font-bold rounded-xl flex items-center justify-center space-x-2 text-shadow">
+                    <span>COMEÇAR DESAFIO</span>
+                    <i class="fa-solid fa-rocket"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Rules & Guide Modal -->
+        <div id="rules-modal" class="hidden absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-md p-3 flex items-center justify-center">
+            <div class="glass-card rounded-2xl p-4 w-full max-w-sm text-slate-800 shadow-2xl border-2 border-amber-400 flex flex-col max-h-[92vh]">
+                
+                <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-amber-500 text-slate-900 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs">
+                            <i class="fa-solid fa-book-open text-[10px]"></i>
+                        </span>
+                        <h3 class="font-fredoka text-sm font-bold text-slate-900">Como Jogar & Guia Educacional</h3>
+                    </div>
+                    <button onclick="closeRulesModal()" class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center text-xs font-bold">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="overflow-y-auto custom-scrollbar my-2 pr-1 space-y-3 text-[10px]">
+                    <div class="bg-sky-50 border border-sky-200 p-2.5 rounded-xl space-y-1">
+                        <h4 class="font-fredoka font-bold text-sky-800 text-[11px] flex items-center">
+                            <i class="fa-solid fa-gamepad mr-1 text-sky-600"></i> Regras Importantes do Jogo
+                        </h4>
+                        <ul class="list-disc list-inside text-slate-700 space-y-1 leading-relaxed font-medium">
+                            <li><strong>Como jogar:</strong> Mova a pasta 💼 arrastando o dedo na tela ou usando as setas para a esquerda e direita para pegar os itens bons!</li>
+                            <li><strong>Duração:</strong> O jogo dura exatamente <strong>3 minutos</strong> se você não perder todas as vidas ou deixar cair mais de 10 itens bons. Fique até o final para ver a mensagem completa!</li>
+                            <li><strong>Vidas (Erros):</strong> Você tem <strong>8 vidas</strong> (pode pegar até 7 obstáculos).</li>
+                            <li><strong>Limite de Perdidos:</strong> Máximo de <strong>10 itens bons perdidos</strong>. No 11º item que passar da tela, o desafio encerra!</li>
+                        </ul>
+                    </div>
+
+                    <div class="space-y-1">
+                        <h4 class="font-fredoka font-bold text-emerald-700 text-[11px] flex items-center">
+                            <i class="fa-solid fa-circle-check mr-1 text-emerald-500"></i> O Que Cada Item Bom Representa (+ Pontos)
+                        </h4>
+                        <div class="grid grid-cols-1 gap-1">
+                            <div class="flex items-start space-x-2 p-1.5 bg-emerald-50/70 border border-emerald-200/60 rounded-lg">
+                                <span class="text-base">☕</span>
+                                <div><strong class="text-emerald-900">Café na Cozinha (+30 pts):</strong> A energia essencial na cozinha da escola.</div>
+                            </div>
+                            <div class="flex items-start space-x-2 p-1.5 bg-emerald-50/70 border border-emerald-200/60 rounded-lg">
+                                <span class="text-base">📺</span>
+                                <div><strong class="text-emerald-900">TV Touch (+40 pts):</strong> Tecnologia interativa em sala de aula.</div>
+                            </div>
+                            <div class="flex items-start space-x-2 p-1.5 bg-emerald-50/70 border border-emerald-200/60 rounded-lg">
+                                <span class="text-base">💬</span>
+                                <div><strong class="text-emerald-900">Comunicação Clara (+35 pts):</strong> Diálogo aberto que descomplica tudo.</div>
+                            </div>
+                            <div class="flex items-start space-x-2 p-1.5 bg-emerald-50/70 border border-emerald-200/60 rounded-lg">
+                                <span class="text-base">🤝</span>
+                                <div><strong class="text-emerald-900">Ajuda da Equipe (+50 pts):</strong> Suporte mútuo entre professores.</div>
+                            </div>
+                            <div class="flex items-start space-x-2 p-1.5 bg-emerald-50/70 border border-emerald-200/60 rounded-lg">
+                                <span class="text-base">🏆</span>
+                                <div><strong class="text-emerald-900">Conquistas (+50 pts):</strong> Ver a evolução dos alunos e celebrar!</div>
+                            </div>
+                            <div class="flex items-start space-x-2 p-1.5 bg-emerald-50/70 border border-emerald-200/60 rounded-lg">
+                                <span class="text-base">😄</span>
+                                <div><strong class="text-emerald-900">Alunos Divertidos (+35 pts):</strong> O bom humor e alegria na turma.</div>
+                            </div>
+                            <div class="flex items-start space-x-2 p-1.5 bg-emerald-50/70 border border-emerald-200/60 rounded-lg">
+                                <span class="text-base">⚡</span>
+                                <div><strong class="text-emerald-900">Treinamento Eficiente (+40 pts):</strong> Capacitação e alinhamento pedagógico.</div>
+                            </div>
+                            <div class="flex items-start space-x-2 p-1.5 bg-emerald-50/70 border border-emerald-200/60 rounded-lg">
+                                <span class="text-base">💯</span>
+                                <div><strong class="text-emerald-900">Nota 10 (+45 pts):</strong> O reconhecimento do esforço mútuo.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <h4 class="font-fredoka font-bold text-rose-700 text-[11px] flex items-center">
+                            <i class="fa-solid fa-triangle-exclamation mr-1 text-rose-500"></i> Obstáculos (Evite! -20 pts & -1 Vida)
+                        </h4>
+                        <div class="grid grid-cols-1 gap-1">
+                            <div class="flex items-start space-x-2 p-1.5 bg-rose-50/70 border border-rose-200/60 rounded-lg">
+                                <span class="text-base">🌀</span>
+                                <div><strong class="text-rose-900">Bagunça:</strong> Desorganização momentânea na turma.</div>
+                            </div>
+                            <div class="flex items-start space-x-2 p-1.5 bg-rose-50/70 border border-rose-200/60 rounded-lg">
+                                <span class="text-base">⏳</span>
+                                <div><strong class="text-rose-900">Perder Horário:</strong> A correria entre uma aula e outra.</div>
+                            </div>
+                            <div class="flex items-start space-x-2 p-1.5 bg-rose-50/70 border border-rose-200/60 rounded-lg">
+                                <span class="text-base">⚡</span>
+                                <div><strong class="text-rose-900">Desentendimento:</strong> Falha de alinhamento momentânea.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <button onclick="closeRulesAndStart()" class="btn-yellow w-full py-2.5 text-slate-900 font-fredoka text-xs font-bold rounded-xl flex items-center justify-center space-x-2 shadow-lg mt-1">
+                    <span>ENTENDI, JOGAR AGORA!</span>
+                    <i class="fa-solid fa-play"></i>
+                </button>
+
+            </div>
+        </div>
+
+        <!-- Quiz Pop-up Modal -->
+        <div id="quiz-modal" class="hidden absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-md p-3 flex items-center justify-center">
+            <div class="glass-card rounded-2xl p-4 w-full max-w-sm text-slate-800 shadow-2xl border-2 border-amber-400 max-h-[92vh] flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center">
+                        <i class="fa-solid fa-bolt text-amber-500 mr-1"></i> Desafio de Rotina!
+                    </span>
+                    <span class="text-[10px] font-semibold text-slate-500" id="quiz-room-tag">Sala Canada</span>
+                </div>
+
+                <h3 id="quiz-question" class="font-fredoka text-[11px] md:text-xs text-slate-900 mb-2 leading-snug">
+                    Pergunta Quiz
+                </h3>
+
+                <div id="quiz-options-container" class="space-y-1.5 max-h-[58vh] overflow-y-auto custom-scrollbar pr-1">
+                    <!-- Options populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Modal -->
+        <div id="feedback-modal" class="hidden absolute inset-0 z-40 bg-slate-950/85 backdrop-blur-md p-3 flex items-center justify-center">
+            <div class="glass-card rounded-2xl p-4 w-full max-w-xs text-center text-slate-800 shadow-2xl border-4 border-amber-400 flex flex-col items-center space-y-2">
+                <div id="feedback-icon" class="text-3xl animate-bounce">🎯</div>
+                <h3 id="feedback-title" class="font-fredoka text-base font-bold text-slate-900">Resposta Registrada!</h3>
+                <p id="feedback-body" class="text-[10px] text-slate-600 leading-relaxed">Behavior guide feedback</p>
+                <div class="bg-amber-100 text-amber-900 font-bold text-[11px] px-3 py-0.5 rounded-full border border-amber-300" id="feedback-pts">
+                    +200 pts
+                </div>
+                <button onclick="closeFeedbackModal()" class="btn-yellow w-full py-2 text-slate-900 font-fredoka text-[11px] font-bold rounded-xl mt-1 shadow">
+                    CONTINUAR O JOGO <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- End Screen (Homage) -->
+        <div id="end-screen" class="hidden absolute inset-0 z-40 bg-slate-950/90 backdrop-blur-lg p-3 overflow-y-auto flex flex-col items-center">
+            <div class="w-full max-w-md my-auto py-2 flex flex-col items-center">
+                <div class="text-center mb-1.5">
+                    <div id="badge-title" class="bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black text-[10px] px-3 py-0.5 rounded-full inline-block uppercase tracking-wider shadow-lg mb-1">
+                        🏆 Super Teacher Ouro
+                    </div>
+                    <h2 class="font-fredoka text-lg text-white">Parabéns pelo Desafio!</h2>
+                    
+                    <!-- SCORE BREAKDOWN CARD -->
+                    <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-2 my-1 text-[10px] text-slate-200 flex justify-around w-full max-w-xs shadow">
+                        <div class="text-center">
+                            <span class="block text-slate-400 font-medium text-[8px] uppercase">Itens Coletados</span>
+                            <span id="items-score" class="font-fredoka text-emerald-400 text-xs font-bold">0 pts</span>
+                        </div>
+                        <div class="border-r border-slate-700"></div>
+                        <div class="text-center">
+                            <span class="block text-slate-400 font-medium text-[8px] uppercase">Quizzes & Rotina</span>
+                            <span id="quiz-score" class="font-fredoka text-amber-400 text-xs font-bold">0 pts</span>
+                        </div>
+                        <div class="border-r border-slate-700"></div>
+                        <div class="text-center">
+                            <span class="block text-slate-400 font-medium text-[8px] uppercase">Total Final</span>
+                            <span id="final-score" class="font-fredoka text-yellow-300 text-xs font-extrabold">0 pts</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white text-slate-800 rounded-2xl p-3 md:p-4 shadow-2xl relative border-3 border-yellow-400 text-center space-y-2 my-1 w-full">
+                    <div class="text-center border-b border-slate-100 pb-2">
+                        <h3 class="font-fredoka text-base text-sky-600 font-bold">Hey teacher, feliz dia! 🎉</h3>
+                        <p class="font-fredoka text-amber-500 font-bold text-[11px]">Seu dia é todo dia!</p>
+                    </div>
+
+                    <div class="text-[10px] leading-relaxed text-slate-600 space-y-1 text-justify">
+                        <p>
+                            Queremos que saiba que você é peça fundamental para fazer a nossa engrenagem rodar. Sabemos que a rotina não é fácil, mas você dá um show no que faz! Orgulha demais ver a evolução dos nossos alunos.
+                        </p>
+                        <p>
+                            Oficialmente, o Dia dos Professores é 15 de outubro, mas o seu dia é todo dia: a cada dúvida que você tira, a cada substituição que salva a gente, a cada aluno desafiador que você ganha no carisma e a cada risada compartilhada.
+                        </p>
+                        <p class="font-semibold text-sky-700 text-center pt-0.5">
+                            Que continuemos trilhando esse caminho juntos.
+                        </p>
+                    </div>
+
+                    <div class="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+                        <span class="text-slate-400 font-medium">Com carinho,</span>
+                        <span class="font-fredoka font-bold text-indigo-600 text-xs">Equipe Rockfeller ❤️</span>
+                    </div>
+                </div>
+
+                <div class="w-full max-w-xs space-y-2 mt-2">
+                    <button onclick="startGame()" class="btn-yellow w-full py-2.5 text-slate-900 font-fredoka text-xs font-bold rounded-xl flex items-center justify-center space-x-2 shadow-xl">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>JOGAR NOVAMENTE</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let isPlaying = false;
+        let score = 0;
+        let itemsCollectedScore = 0;
+        let quizTotalScore = 0;
+        let lives = 8;
+        let missedGoodItems = 0;
+        const MAX_MISSED_ITEMS = 10;
+        const MAX_GAME_TIME = 180; // Exactly 3 minutes (180s)
+        let gameTime = 0;
+        let lastTime = 0;
+        let roomIndex = 0;
+        let spawnTimer = 0;
+        let fallingItems = [];
+        let touchX = null;
+        let soundMuted = false;
+        let audioCtx = null;
+        let musicInterval = null;
+        let musicNoteIndex = 0;
+
+        const keys = { left: false, right: false };
+
+        const goodItemTypes = [
+            { emoji: '☕', pts: 30 },
+            { emoji: '📺', pts: 40 },
+            { emoji: '💬', pts: 35 },
+            { emoji: '🤝', pts: 50 },
+            { emoji: '🏆', pts: 50 },
+            { emoji: '😄', pts: 35 },
+            { emoji: '⚡', pts: 40 },
+            { emoji: '💯', pts: 45 }
+        ];
+
+        const badItemTypes = [
+            { emoji: '🌀', pts: 20 },
+            { emoji: '⏳', pts: 20 },
+            { emoji: '⚡', pts: 20 }
+        ];
+
+        const bgMelodyNotes = [
+            261.63, 329.63, 392.00, 523.25,
+            329.63, 392.00, 523.25, 659.25,
+            293.66, 349.23, 440.00, 587.33,
+            349.23, 440.00, 587.33, 698.46
+        ];
+
+        // 10 EXACT QUIZ QUESTIONS WITH 3 OPTIONS EACH
+        const quizList = [
+            {
+                timeTrigger: 12,
+                question: "PERGUNTA 1 — A TV Touch decidiu entrar de férias! A TV Touch da Sala Canada trava bem na hora daquela atividade incrível. A turma está olhando para você como se você fosse o suporte técnico da NASA. E agora?",
+                roomTag: "Sala Canada",
+                triggered: false,
+                options: [
+                    { text: "Respira fundo, ativa o modo apresentador da Broadway e transforma a aula em uma super dinâmica oral, pedindo apoio pedagógico.", pts: 200, isBest: true, feedback: "🏆 Teacher raiz não trava junto com a TV! A tecnologia pode falhar, mas o seu carisma está sempre online. O suporte pedagógico agradece!" },
+                    { text: "Começa a apertar todos os botões da TV, na esperança de que ela sinta sua autoridade.", pts: 0, isBest: false, feedback: "Apertar botões aleatórios não resolve. O ideal é manter a calma e usar a dinâmica oral com apoio pedagógico." },
+                    { text: "Olha para a tela e diz: “Pessoal, hoje vamos estudar a história da tecnologia… começando pelo seu fracasso.”", pts: 0, isBest: false, feedback: "Evite desanimar a turma; mantenha o engajamento com uma boa dinâmica oral!" }
+                ]
+            },
+            {
+                timeTrigger: 28,
+                question: "PERGUNTA 2 — O crime do café desaparecido ☕. Você chega à cozinha para o seu merecido café e descobre que a garrafa está mais vazia que a paciência de um teacher na semana de provas. Qual é a reação?",
+                roomTag: "Cozinha",
+                triggered: false,
+                options: [
+                    { text: "Olha para a garrafa e sussurra: “Quem fez isso com a nossa equipe?”", pts: 0, isBest: false, feedback: "Em vez de lamentar, faça um café fresco e aproveite para interagir com a equipe." },
+                    { text: "Prepara um café fresquinho, aproveita para dar boas risadas com a equipe e recarrega as energias.", pts: 200, isBest: true, feedback: "☕ Café novo, energia renovada e fofoca corporativa saudável em dia! Só não vale esquecer que o intervalo também precisa ter hora para acabar." },
+                    { text: "Entra na próxima aula perguntando aos alunos se alguém sabe fazer uma vaquinha para comprar uma cafeteira.", pts: 0, isBest: false, feedback: "Mantenha o profissionalismo e resolva com leveza na cozinha." }
+                ]
+            },
+            {
+                timeTrigger: 46,
+                question: "PERGUNTA 3 — Missão impossível: substituição surpresa! 🌳. Você está tranquilamente seguindo seu planejamento quando chega a notícia: “Teacher, precisamos de você no Central Park!” A aula começa em poucos minutos. O que fazer?",
+                roomTag: "Central Park",
+                triggered: false,
+                options: [
+                    { text: "Confere as orientações com o apoio pedagógico, respira e entra na sala como quem acabou de ser anunciado no Grammy.", pts: 200, isBest: true, feedback: "🏆 Plot twist na rotina! Com orientação, jogo de cintura e energia, você transforma o imprevisto em mais uma história para contar na cozinha." },
+                    { text: "Pergunta se a substituição vem acompanhada de férias, aumento salarial e um apartamento na Barra.", pts: 0, isBest: false, feedback: "Substituições fazem parte da rotina escolar dinâmica. Encare com flexibilidade!" },
+                    { text: "Finge que o Wi-Fi caiu, coloca o celular no silencioso e desaparece misteriosamente.", pts: 0, isBest: false, feedback: "O compromisso com a equipe e com os alunos é fundamental em qualquer situação." }
+                ]
+            },
+            {
+                timeTrigger: 64,
+                question: "PERGUNTA 4 — O Kids e a pergunta proibida 🤣. No meio da aula, um aluno Kids solta uma pergunta tão inesperada que até o Google precisaria de três dias para responder. Qual é a sua atitude?",
+                roomTag: "Sala Canada",
+                triggered: false,
+                options: [
+                    { text: "Finge que não ouviu e continua a explicação como um robô programado em 1998.", pts: 0, isBest: false, feedback: "Ignorar o aluno diminui o engajamento e a empatia em sala de aula." },
+                    { text: "Responde com uma expressão séria e começa a questionar todas as suas escolhas profissionais.", pts: 0, isBest: false, feedback: "Mantenha o bom humor e aproveite a espontaneidade dos alunos!" },
+                    { text: "Segura a risada (se conseguir), acolhe a curiosidade e transforma o momento em uma oportunidade divertida de aprendizado.", pts: 200, isBest: true, feedback: "😂 Com Kids, todo dia é uma temporada nova de uma série que ninguém escreveu o roteiro! Acolher, brincar e ensinar faz parte do espetáculo." }
+                ]
+            },
+            {
+                timeTrigger: 82,
+                question: "PERGUNTA 5 — O Wi-Fi foi de arrasta! 📶. No meio da aula, a internet desaparece. A plataforma para, a atividade não carrega e você sente que o roteador escolheu justamente hoje para tirar uma licença. E agora?",
+                roomTag: "Rockfeller Center",
+                triggered: false,
+                options: [
+                    { text: "Fica encarando o símbolo do Wi-Fi até ele sentir vergonha e voltar.", pts: 0, isBest: false, feedback: "Ficar parado esperando não resolve. O professor deve sempre ter um plano B pronto." },
+                    { text: "Ativa o plano B com atividades offline, materiais impressos e muita criatividade para manter a aula fluindo.", pts: 200, isBest: true, feedback: "📶 O Wi-Fi pode cair, mas a qualidade do teacher não! Plano B ativado: aula salva, alunos envolvidos e roteador sem poder de decisão sobre o aprendizado." },
+                    { text: "Avisa que hoje a aula será sobre meditação coletiva enquanto todos esperam a internet voltar.", pts: 0, isBest: false, feedback: "Tenha sempre atividades offline preparadas para manter o ritmo pedagógico." }
+                ]
+            },
+            {
+                timeTrigger: 100,
+                question: "PERGUNTA 6 — O encerramento digno de Oscar! 🧠. A aula foi tão produtiva que os alunos estão falando inglês, participando e acertando tudo. Faltam poucos minutos para terminar. Como fechar com chave de ouro?",
+                roomTag: "Central Park",
+                triggered: false,
+                options: [
+                    { text: "Passa 47 exercícios extras nos últimos 30 segundos porque o sucesso precisa ser testado.", pts: 0, isBest: false, feedback: "Tarefas excessivas de última hora geram ansiedade e desmotivação." },
+                    { text: "Olha para o relógio, fecha o livro no meio da frase e sai em velocidade olímpica.", pts: 0, isBest: false, feedback: "O encerramento da aula deve ser organizado, acolhedor e motivador." },
+                    { text: "Faz um mini game de revisão, celebra os avanços da turma e encerra com aquela energia de final de campeonato.", pts: 200, isBest: true, feedback: "🏅 Aprendizado consolidado, autoestima lá em cima e teacher saindo da sala com trilha sonora de vitória! É assim que se fecha uma aula memorável." }
+                ]
+            },
+            {
+                timeTrigger: 118,
+                question: "PERGUNTA 7 — O aluno que tem inglês, mas não tem coragem! 🗣️. Você faz uma pergunta em inglês e o aluno sabe a resposta, mas fica olhando para você como se tivesse acabado de esquecer todas as línguas existentes. O que fazer?",
+                roomTag: "Sala Canada",
+                triggered: false,
+                options: [
+                    { text: "Diz: “Vamos lá, gente! Até o Google Tradutor responderia mais rápido!”", pts: 0, isBest: false, feedback: "Pressionar ou ironizar o aluno bloqueia a confiança dele em falar outro idioma." },
+                    { text: "Acolhe, dá pistas, incentiva sem pressionar e comemora cada tentativa de falar.", pts: 200, isBest: true, feedback: "💙 Fluência não nasce no grito nem no susto! Nasce com prática, confiança e um teacher que transforma o “I don't know” em “Let me try!”." },
+                    { text: "Faz contato visual com o aluno até ele achar que está participando de um interrogatório internacional.", pts: 0, isBest: false, feedback: "Crie um ambiente seguro e encorajador para que o aluno se sinta à vontade." }
+                ]
+            },
+            {
+                timeTrigger: 136,
+                question: "PERGUNTA 8 — O feedback da coordenação chegou! ☕. A coordenação pedagógica compartilha um feedback construtivo para ajudar você a evoluir. Qual é a reação de um verdadeiro Teacher Rockfeller?",
+                roomTag: "Rockfeller Center",
+                triggered: false,
+                options: [
+                    { text: "Ativa o modo defesa: “Mas na minha cabeça estava perfeito!”", pts: 0, isBest: false, feedback: "A escuta ativa e a abertura para feedbacks são essenciais para o crescimento." },
+                    { text: "Concorda com tudo na reunião e, ao sair, continua fazendo exatamente igual.", pts: 0, isBest: false, feedback: "O objetivo do feedback é a melhoria contínua na prática pedagógica." },
+                    { text: "Escuta, agradece, tira dúvidas e coloca as sugestões em prática. Depois, se der tempo, comemora a evolução com um café na cozinha.", pts: 200, isBest: true, feedback: "🚀 Feedback não é ataque pessoal, é atualização de sistema! Teacher que aprende, evolui. E teacher que evolui ajuda os alunos a evoluírem também." }
+                ]
+            },
+            {
+                timeTrigger: 154,
+                question: "PERGUNTA 9 — Fim do expediente: sobrevivi! 🎉. São los últimos minutos de um dia intenso. Teve aula, imprevisto, risada, dúvida, TV Touch, Wi-Fi e pelo menos um “Teacher, posso ir ao banheiro?”. Como você termina o expediente?",
+                roomTag: "Rockfeller Center",
+                triggered: false,
+                options: [
+                    { text: "Sai correndo da escola como se estivesse participando de uma prova de 100 metros rasos.", pts: 0, isBest: false, feedback: "Aproveite para curtir a sensação de dever cumprido antes de ir descansar." },
+                    { text: "Faz uma lista mental de todos os imprevistos e promete escrever um livro chamado “O Caos em 60 Minutos”.", pts: 0, isBest: false, feedback: "Foque nos momentos positivos e na evolução fantástica dos seus alunos!" },
+                    { text: "Com a sensação de dever cumprido, orgulho do progresso dos alunos e a certeza de que fez a diferença — mesmo que o café tenha sido essencial para isso.", pts: 200, isBest: true, feedback: "💙💛 Missão cumprida, Teacher! Nem todo dia é perfeito, mas cada aula é uma oportunidade de transformar vidas. Agora pode ir descansar… amanhã tem mais! 😂" }
+                ]
+            },
+            {
+                timeTrigger: 170,
+                question: "PERGUNTA BÔNUS — O verdadeiro superpoder do Teacher Rockfeller! 🦸. Se você pudesse escolher um superpoder para usar na escola, qual seria?",
+                roomTag: "Rockfeller Center",
+                triggered: false,
+                options: [
+                    { text: "Fazer todos os alunos lembrarem o conteúdo sem precisar revisar.", pts: 0, isBest: false, feedback: "A revisão faz parte do processo pedagógico de fixação do idioma." },
+                    { text: "Materializar café sempre que alguém disser “Teacher, tenho uma dúvida”.", pts: 0, isBest: false, feedback: "Essa seria ótima para a cozinha, mas o maior poder é o impacto na aprendizagem!" },
+                    { text: "Conseguir que todos os alunos falem inglês com confiança, se divirtam e saiam da aula querendo aprender mais.", pts: 200, isBest: true, feedback: "🌟 Esse é o verdadeiro superpoder de um Teacher Rockfeller! Inspirar e transformar através do inglês." }
+                ]
+            }
+        ];
+
+        const rooms = [
+            { name: 'Rockfeller Center', color: '#0284c7' },
+            { name: 'Sala Canada', color: '#0369a1' },
+            { name: 'Central Park', color: '#0f766e' }
+        ];
+
+        const player = {
+            x: 0,
+            y: 0,
+            width: 70,
+            height: 70,
+            speed: 9,
+            emoji: '💼'
+        };
+
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            player.y = canvas.height - 90;
+            player.x = (canvas.width - player.width) / 2;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function openRulesModal() {
+            document.getElementById('rules-modal').classList.remove('hidden');
+        }
+
+        function closeRulesModal() {
+            document.getElementById('rules-modal').classList.add('hidden');
+        }
+
+        function closeRulesAndStart() {
+            closeRulesModal();
+            startGame();
+        }
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    audioCtx = new AudioContext();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(type) {
+            if (soundMuted || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'good') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.15);
+                } else if (type === 'bad') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.2);
+                }
+            } catch (e) {}
+        }
+
+        function toggleSound() {
+            soundMuted = !soundMuted;
+            const icon = document.getElementById('sound-icon');
+            if (soundMuted) {
+                icon.className = 'fa-solid fa-volume-xmark';
+                stopBackgroundMusic();
+            } else {
+                icon.className = 'fa-solid fa-volume-high';
+                if (isPlaying) startBackgroundMusic();
+            }
+        }
+
+        function startBackgroundMusic() {
+            if (soundMuted || musicInterval) return;
+            musicInterval = setInterval(() => {
+                if (!audioCtx || soundMuted) return;
+                try {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    const freq = bgMelodyNotes[musicNoteIndex % bgMelodyNotes.length];
+                    musicNoteIndex++;
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.25);
+                } catch (e) {}
+            }, 300);
+        }
+
+        function stopBackgroundMusic() {
+            if (musicInterval) {
+                clearInterval(musicInterval);
+                musicInterval = null;
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('score-text').innerText = score;
+            document.getElementById('lives-text').innerText = lives;
+            document.getElementById('missed-text').innerText = `${missedGoodItems}/${MAX_MISSED_ITEMS}`;
+            const currentRoom = rooms[roomIndex] || rooms[0];
+            document.getElementById('room-name').innerText = currentRoom ? currentRoom.name : 'Rockfeller Center';
+        }
+
+        function spawnItem() {
+            const isGood = Math.random() > 0.35;
+            const itemPool = isGood ? goodItemTypes : badItemTypes;
+            const data = itemPool[Math.floor(Math.random() * itemPool.length)];
+
+            // Gentle, slower speed multiplier
+            const speedMultiplier = 1 + (gameTime / MAX_GAME_TIME) * 0.5;
+
+            fallingItems.push({
+                x: Math.random() * (canvas.width - 40) + 20,
+                y: -30,
+                radius: 22,
+                speed: (1.2 + Math.random() * 0.8) * speedMultiplier,
+                isGood: isGood,
+                data: data
+            });
+        }
+
+        let currentActiveQuiz = null;
+
+        function triggerQuiz(quiz) {
+            isPlaying = false;
+            stopBackgroundMusic();
+            currentActiveQuiz = quiz;
+            playSound('good');
+
+            document.getElementById('quiz-question').innerText = quiz.question;
+            document.getElementById('quiz-room-tag').innerText = quiz.roomTag;
+
+            const shuffledOptions = [...quiz.options].sort(() => Math.random() - 0.5);
+            currentActiveQuiz.shuffledOptions = shuffledOptions;
+
+            const container = document.getElementById('quiz-options-container');
+            container.innerHTML = '';
+
+            const optionLetters = ['A', 'B', 'C'];
+
+            shuffledOptions.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-sky-100 hover:border-sky-300 active:bg-sky-200 text-slate-800 font-medium text-[11px] transition flex items-start space-x-2 shadow-sm';
+                btn.onclick = () => answerQuiz(opt);
+
+                const badge = document.createElement('span');
+                badge.className = 'bg-sky-500 text-white rounded-md px-1.5 py-0.5 font-bold text-[10px] shrink-0 mt-0.5';
+                badge.innerText = optionLetters[idx] || (idx + 1);
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'leading-snug';
+                textSpan.innerText = opt.text;
+
+                btn.appendChild(badge);
+                btn.appendChild(textSpan);
+                container.appendChild(btn);
+            });
+
+            document.getElementById('quiz-modal').classList.remove('hidden');
+        }
+
+        function answerQuiz(selectedOption) {
+            document.getElementById('quiz-modal').classList.add('hidden');
+            
+            const earnedPts = selectedOption.isBest ? selectedOption.pts : 0;
+
+            quizTotalScore += earnedPts;
+            score += earnedPts;
+            updateHUD();
+
+            const feedbackIcon = document.getElementById('feedback-icon');
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackBody = document.getElementById('feedback-body');
+            const feedbackPts = document.getElementById('feedback-pts');
+
+            if (selectedOption.isBest) {
+                feedbackIcon.innerText = '🌟';
+                feedbackTitle.innerText = 'Resposta Correta!';
+                feedbackTitle.className = 'font-fredoka text-base font-bold text-emerald-600';
+                feedbackBody.innerText = selectedOption.feedback;
+                feedbackPts.innerText = `+${earnedPts} pts conquistados!`;
+                feedbackPts.className = 'bg-emerald-100 text-emerald-900 font-bold text-[11px] px-3.5 py-0.5 rounded-full border border-emerald-300';
+                playSound('good');
+            } else {
+                feedbackIcon.innerText = '⚠️';
+                feedbackTitle.innerText = 'Resposta Incorreta!';
+                feedbackTitle.className = 'font-fredoka text-base font-bold text-rose-600';
+                feedbackBody.innerText = selectedOption.feedback;
+                feedbackPts.innerText = '+0 pts (Conduta incorreta)';
+                feedbackPts.className = 'bg-rose-100 text-rose-900 font-bold text-[11px] px-3.5 py-0.5 rounded-full border border-rose-300';
+                playSound('bad');
+            }
+
+            document.getElementById('feedback-modal').classList.remove('hidden');
+        }
+
+        function closeFeedbackModal() {
+            document.getElementById('feedback-modal').classList.add('hidden');
+            isPlaying = true;
+            startBackgroundMusic();
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            initAudio();
+            
+            score = 0;
+            itemsCollectedScore = 0;
+            quizTotalScore = 0;
+            lives = 8;
+            missedGoodItems = 0;
+            gameTime = 0;
+            roomIndex = 0;
+            spawnTimer = 0;
+            fallingItems = [];
+            
+            quizList.forEach(q => q.triggered = false);
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('touch-controls').classList.remove('hidden');
+
+            resizeCanvas();
+            updateHUD();
+
+            isPlaying = true;
+            startBackgroundMusic();
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            isPlaying = false;
+            stopBackgroundMusic();
+
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('touch-controls').classList.add('hidden');
+            document.getElementById('end-screen').classList.remove('hidden');
+
+            document.getElementById('items-score').innerText = itemsCollectedScore + " pts";
+            document.getElementById('quiz-score').innerText = quizTotalScore + " pts";
+            document.getElementById('final-score').innerText = score + " pts";
+
+            let badgeStr = "🏆 Super Teacher Ouro";
+            if (score > 1800) badgeStr = "🌟 Super Teacher Lendário!";
+            else if (score > 1200) badgeStr = "🥇 Super Teacher Diamante!";
+            else if (score > 600) badgeStr = "🥈 Super Teacher Ouro!";
+            else badgeStr = "🥉 Super Teacher Bronze!";
+            
+            document.getElementById('badge-title').innerText = badgeStr;
+
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 120,
+                    spread: 80,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+        });
+
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+
+        btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); keys.left = true; });
+        btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); keys.left = false; });
+        btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); keys.right = true; });
+        btnRight.addEventListener('touchend', (e) => { e.preventDefault(); keys.right = false; });
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                const rect = canvas.getBoundingClientRect();
+                touchX = e.touches[0].clientX - rect.left;
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                const rect = canvas.getBoundingClientRect();
+                touchX = e.touches[0].clientX - rect.left;
+            }
+        });
+
+        canvas.addEventListener('touchend', () => { touchX = null; });
+
+        function gameLoop(now) {
+            if (!isPlaying) return;
+
+            if (!now) now = performance.now();
+            let dt = (now - lastTime) / 1000;
+            if (isNaN(dt) || dt < 0 || dt > 0.1) dt = 0.016;
+            lastTime = now;
+            gameTime += dt;
+
+            if (gameTime >= MAX_GAME_TIME) {
+                endGame();
+                return;
+            }
+
+            let currentRoomIdx = Math.floor((gameTime / 60) % rooms.length);
+            if (isNaN(currentRoomIdx) || currentRoomIdx < 0 || currentRoomIdx >= rooms.length) {
+                currentRoomIdx = 0;
+            }
+
+            if (currentRoomIdx !== roomIndex) {
+                roomIndex = currentRoomIdx;
+                updateHUD();
+            }
+
+            for (let q of quizList) {
+                if (gameTime >= q.timeTrigger && !q.triggered) {
+                    q.triggered = true;
+                    triggerQuiz(q);
+                    return;
+                }
+            }
+
+            const currentSpawnInterval = Math.max(0.55, 0.95 - (gameTime * 0.0008));
+            spawnTimer += dt;
+            if (spawnTimer > currentSpawnInterval) {
+                spawnItem();
+                spawnTimer = 0;
+            }
+
+            if (touchX !== null) {
+                player.x += (touchX - player.width / 2 - player.x) * 0.25;
+            } else {
+                if (keys.left) player.x -= player.speed;
+                if (keys.right) player.x += player.speed;
+            }
+
+            player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const currentRoom = rooms[roomIndex] || rooms[0];
+            const roomColor = currentRoom ? currentRoom.color : '#0284c7';
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGrad.addColorStop(0, roomColor);
+            bgGrad.addColorStop(1, '#e0f2fe');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.font = '50px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(player.emoji, player.x + player.width / 2, player.y + player.height / 2);
+
+            for (let i = fallingItems.length - 1; i >= 0; i--) {
+                const item = fallingItems[i];
+                item.y += item.speed + (gameTime * 0.008);
+
+                ctx.beginPath();
+                ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
+                ctx.fillStyle = item.isGood ? 'rgba(255, 255, 255, 0.9)' : 'rgba(254, 226, 226, 0.95)';
+                ctx.fill();
+                ctx.strokeStyle = item.isGood ? '#38bdf8' : '#f87171';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.font = '22px sans-serif';
+                ctx.fillText(item.data.emoji, item.x, item.y);
+
+                const dist = Math.hypot((player.x + player.width / 2) - item.x, (player.y + player.height / 2) - item.y);
+                if (dist < player.width / 2 + item.radius) {
+                    if (item.isGood) {
+                        itemsCollectedScore += item.data.pts;
+                        score += item.data.pts;
+                        playSound('good');
+                    } else {
+                        score = Math.max(0, score - 20);
+                        lives--;
+                        playSound('bad');
+                        if (lives <= 0) {
+                            endGame();
+                            return;
+                        }
+                    }
+                    updateHUD();
+                    fallingItems.splice(i, 1);
+                    continue;
+                }
+
+                if (item.y > canvas.height + 40) {
+                    if (item.isGood) {
+                        missedGoodItems++;
+                        updateHUD();
+                        if (missedGoodItems >= MAX_MISSED_ITEMS) {
+                            endGame();
+                            return;
+                        }
+                    }
+                    fallingItems.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
